@@ -85,6 +85,29 @@ LAB2_NUM_TRAIN_FILES=3 LAB2_EXPECTED_TRAIN_ROWS=6000 LAB2_SMOKE_ROWS=256 LAB2_KE
 `faiss-cpu==1.11.0`, `pyarrow`, `pandas`, `matplotlib`, `nbclient` and `huggingface_hub`
 installed. `run_nb.py` exits with code 1 if any cell fails.
 
+### Live demo (Hugging Face Space)
+
+[`lab2/deploy/`](lab2/deploy/) turns the IVF-PQ index into a Gradio app: upload an image, or pick a random
+validation image, to get its 10 nearest ImageNet training images. Result images are streamed from the
+dataset, not stored in the Space.
+
+1. **Export the index.** Open [`export_index.ipynb`](lab2/deploy/export_index.ipynb) on a standard Colab CPU
+   runtime. Add an `HF_TOKEN` with **write** access in Colab's Secrets panel. In a cell at the top, set
+   `os.environ["LAB2_HF_ASSETS_REPO"] = "<your-username>/imagenet-clip-ivfpq"`, then choose **Run all**.
+   It rebuilds IVF-PQ, checks it reproduces the reported precision and recall, and uploads about 110 MB to a
+   private dataset repository.
+2. **Create the Space** and upload the app:
+   ```bash
+   hf auth login     # token with write access
+   hf repo create spaces/<your-username>/imagenet-image-search --type space --space-sdk gradio
+   hf upload spaces/<your-username>/imagenet-image-search lab2/deploy/space . --type space
+   ```
+3. **Configure it** in the Space's *Settings → Variables and secrets*:
+   - a variable `ASSETS_REPO` = `<your-username>/imagenet-clip-ivfpq`;
+   - a secret `HF_TOKEN` with **read** access.
+
+   Then restart the Space. Its first start downloads the CLIP weights (1.7 GB) and takes a few minutes.
+
 ### Building the report
 
 ```bash
