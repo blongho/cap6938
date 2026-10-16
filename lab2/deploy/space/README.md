@@ -49,3 +49,4 @@ Set these in the Space's **Settings → Variables and secrets**.
 | `NUM_THREADS` | variable | all cores | CPU threads for CLIP and FAISS |
 | `FETCH_WORKERS` | variable | `10` | Parallel image downloads |
 | `ROWGROUP_CACHE` | variable | `64` | Parquet row groups (about 100 images each) kept in memory |
+| `SOURCE_URL` | variable | `https://github.com/blongho/cap6938/tree/master/lab2` | Source code link shown at the bottom of the app |

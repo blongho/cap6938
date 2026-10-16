@@ -9,6 +9,7 @@ Configuration (environment variables, set as Space variables or secrets):
   NUM_THREADS        CPU threads for CLIP (on CPU hardware) and FAISS (default: all cores)
   FETCH_WORKERS      parallel image downloads (default 10)
   ROWGROUP_CACHE     parquet row groups kept in memory (default 64)
+  SOURCE_URL         link to the source code shown at the bottom of the app
 """
 import io
 import json
@@ -45,6 +46,7 @@ TOPK = int(os.environ.get("TOPK", 10))
 NUM_THREADS = int(os.environ.get("NUM_THREADS", os.cpu_count() or 1))
 FETCH_WORKERS = int(os.environ.get("FETCH_WORKERS", 10))
 ROWGROUP_CACHE = int(os.environ.get("ROWGROUP_CACHE", 64))
+SOURCE_URL = os.environ.get("SOURCE_URL", "https://github.com/blongho/cap6938/tree/master/lab2")
 NPROBE_CHOICES = [1, 2, 4, 8, 16, 32, 64, 128]
 ASSET_FILES = ["assets.json", "class_names.json", "db_labels.npy", "ivfpq.faissindex"]
 
@@ -216,7 +218,8 @@ with gr.Blocks(title="ImageNet image search") as demo:
     gr.Markdown(
         "Images come from [`" + ASSETS["dataset"] + "`](https://huggingface.co/datasets/" + ASSETS["dataset"] + ") "
         "and are streamed on request, not stored in this Space. ImageNet images are for non-commercial research "
-        "and education only.")
+        "and education only.\n\n"
+        f"Source code, notebooks and report: [{SOURCE_URL.removeprefix('https://')}]({SOURCE_URL})")
 
     random_btn.click(random_query, outputs=[query, query_note]).then(
         search, inputs=[query, nprobe], outputs=[results, summary])
