@@ -87,26 +87,37 @@ installed. `run_nb.py` exits with code 1 if any cell fails.
 
 ### Live demo (Hugging Face Space)
 
-[`lab2/deploy/`](lab2/deploy/) turns the IVF-PQ index into a Gradio app: upload an image, or pick a random
-validation image, to get its 10 nearest ImageNet training images. Result images are streamed from the
-dataset, not stored in the Space.
+**Try it: https://blongho-imagenet-image-search.hf.space**
+([Space page](https://huggingface.co/spaces/blongho/imagenet-image-search)).
+Upload an image, or click **Random validation image**, to get its 10 nearest ImageNet training images with their
+classes and similarity scores. **nprobe** trades speed for accuracy. A search takes about 3 s in the browser.
+
+[`lab2/deploy/`](lab2/deploy/) holds the code. The Space runs on **ZeroGPU**, the free GPU hardware for Gradio
+Spaces: only the query embedding uses the GPU, and each search uses a little of the visitor's daily ZeroGPU quota.
+Result images are streamed from the dataset, not stored in the Space.
+
+To deploy your own copy:
 
 1. **Export the index.** Open [`export_index.ipynb`](lab2/deploy/export_index.ipynb) on a standard Colab CPU
    runtime. Add an `HF_TOKEN` with **write** access in Colab's Secrets panel. In a cell at the top, set
    `os.environ["LAB2_HF_ASSETS_REPO"] = "<your-username>/imagenet-clip-ivfpq"`, then choose **Run all**.
    It rebuilds IVF-PQ, checks it reproduces the reported precision and recall, and uploads about 110 MB to a
    private dataset repository.
-2. **Create the Space** and upload the app:
-   ```bash
-   hf auth login     # token with write access
-   hf repo create <your-username>/imagenet-image-search --type space --space-sdk gradio --private
-   hf upload <your-username>/imagenet-image-search lab2/deploy/space . --type space
-   ```
+2. **Create the Space** at [huggingface.co/new-space](https://huggingface.co/new-space): SDK **Gradio**,
+   hardware **ZeroGPU**. Hugging Face requires PRO for Gradio Spaces on CPU basic, but free accounts can host
+   up to 2 ZeroGPU Spaces.
 3. **Configure it** in the Space's *Settings → Variables and secrets*:
    - a variable `ASSETS_REPO` = `<your-username>/imagenet-clip-ivfpq`;
    - a secret `HF_TOKEN` with **read** access.
-
-   Then restart the Space. Its first start downloads the CLIP weights (1.7 GB) and takes a few minutes.
+4. **Upload the app** after `hf auth login` with a write token. Use the Python API: `hf upload` first tries to
+   create the repository, and that is refused with "402 Payment Required" without PRO.
+   ```bash
+   python3 -c "
+   from huggingface_hub import HfApi
+   HfApi().upload_folder(repo_id='<your-username>/imagenet-image-search', repo_type='space',
+                         folder_path='lab2/deploy/space', commit_message='Deploy image search app')"
+   ```
+   The Space builds and starts automatically. The first start downloads the CLIP weights (1.7 GB).
 
 ### Building the report
 

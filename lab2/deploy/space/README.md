@@ -1,13 +1,14 @@
 ---
 title: ImageNet Image Search
-emoji: 🔎
+emoji: 🐠
 colorFrom: blue
 colorTo: indigo
 sdk: gradio
-sdk_version: 6.28.0
+sdk_version: 6.30.0
 python_version: "3.12"
 app_file: app.py
 pinned: false
+license: mit
 short_description: CLIP ViT-L/14 + FAISS IVF-PQ search over ImageNet-1k
 ---
 
