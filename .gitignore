@@ -1,0 +1,66 @@
+# --- Secrets and credentials -------------------------------------------------
+# HF_TOKEN and any other credential live in the Colab Secrets panel or the
+# shell environment, never in the repository.
+.env
+.env.*
+.env-*
+!.env.example
+*.pem
+*.key
+*.p12
+*.bak
+secrets/
+.huggingface/
+.cache/huggingface/
+
+# --- Large or regenerable data (lives on Google Drive / Hugging Face) --------
+# Embeddings, indexes and dataset shards are produced by the notebooks and are
+# far too large for git. Results that the report uses (CSV, PNG) stay tracked.
+*.parquet
+*.npy
+*.npz
+*.faissindex
+*.index
+embeddings/
+data/
+
+# --- LaTeX build artefacts (the .tex sources and final .pdf stay tracked) -----
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+*.toc
+*.lof
+*.lot
+*.nav
+*.snm
+*.vrb
+
+# --- Python and Jupyter -----------------------------------------------------
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.venv/
+venv/
+.pytest_cache/
+
+# --- Local test runs (tests/ write their output outside the repo by default) --
+lab2test/
+out_*.ipynb
+
+# --- Local assistant instructions (kept out of the repository) ---------------
+CLAUDE.md
+
+# --- Operating system and editor files ---------------------------------------
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+lab2/docs/
+lab2/notebooks/*.ipynb
+lab1/output/*

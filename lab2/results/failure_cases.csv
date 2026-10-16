@@ -1,0 +1,7 @@
+case,group,query,query_class,failing,p_flat,p_pq64,p_ivf_flat,p_ivf_pq64,most_common_wrong,hint
+1,embedding or label,3,viaduct,flat,0.0,0.0,0.0,0.0,trolleybus (4/10),scattered classes: check for background/context or a second object
+2,embedding or label,12,eggnog,flat,0.0,0.0,0.0,0.0,candle (2/10),scattered classes: check for background/context or a second object
+3,embedding or label,20,American coot,flat,0.0,0.1,0.0,0.1,drake (8/10),one sibling class dominates: check for look-alike / label ambiguity
+4,quantization,529,web site,pq64,1.0,0.0,1.0,0.9,mobile home (5/10),
+5,quantization,877,thimble,pq64,1.0,0.0,1.0,0.9,espresso (6/10),
+6,quantization,528,muzzle,pq64,1.0,0.1,1.0,1.0,Tibetan terrier (2/10),

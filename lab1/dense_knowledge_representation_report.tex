@@ -1,0 +1,137 @@
+% Self-contained: compile twice with pdflatex; no external figures or .bib needed.
+% Evidence: dense_knowledge_representation_complete.ipynb (saved experiment outputs).
+\documentclass[10pt,letterpaper]{article}
+\usepackage[margin=0.65in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern,microtype,multicol}
+\usepackage{amsmath,booktabs,titlesec}
+\titleformat{\section}{\normalsize\bfseries}{}{0pt}{}
+\titlespacing*{\section}{0pt}{5pt}{3pt}
+\usepackage[hidelinks]{hyperref}
+\hypersetup{pdftitle={Dense Knowledge Representation: CLIP versus Qwen3-VL Embeddings},
+  pdfauthor={Longho Bernard Che},pdfsubject={CAP6938 Topic 1: MMEB failure analysis}}
+\setlength{\columnsep}{0.25in}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{3pt}
+\setlength{\tabcolsep}{4pt}
+\newcommand{\heading}[1]{\par\addvspace{5pt}\noindent{\normalsize\bfseries #1}\par\nobreak}
+\newcommand{\case}[1]{\par\addvspace{4pt}\noindent\textbf{#1}\par\nobreak}
+\begin{document}
+\begin{center}
+{\Large\bfseries Dense Knowledge Representation:\\[2pt]
+CLIP versus Qwen3-VL Embeddings}\par
+\vspace{3pt}
+Longho Bernard Che\quad $\vert$\quad CAP6938, Topic 1
+\end{center}
+\vspace{-8pt}
+\begin{multicols}{2}
+\heading{1. Experimental setup}
+I compare CLIP and Qwen on 24 queries each from four MMEB datasets~\cite{mmeb}:
+CIFAR-100 (classification), CIRR (image retrieval), TextVQA (answer retrieval),
+and RefCOCO (object-crop retrieval). Seed 6938 controls sampling. Each query has
+its annotated positive and 31 sampled negatives after text/path deduplication,
+in shuffled order. Models rank identical pools; these are not official benchmark
+scores.
+
+\texttt{openai/clip-vit-base-patch32}~\cite{clip} independently encodes images
+and text; my mixed-input adaptation adds their unit vectors equally and
+renormalizes. \texttt{Qwen/Qwen3-VL-Embedding-2B}~\cite{qwen} jointly processes
+image/text tokens and normalizes the last non-padding hidden state. Both embed
+queries and candidates separately, ranking by cosine similarity. Query ablations
+remove one modality while holding candidate embeddings fixed. The A100 40GB run and full
+configurations are documented in the notebook.
+
+\heading{2. Results}
+\begin{center}
+\small
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+& \multicolumn{2}{c}{Accuracy (\%)} & \multicolumn{2}{c}{MRR}\\
+Dataset & CLIP & Qwen & CLIP & Qwen\\
+\midrule
+CIFAR-100 & 4.2 & 58.3 & .203 & .696\\
+CIRR      & 66.7 & 87.5 & .785 & .938\\
+TextVQA   & 16.7 & 100.0 & .292 & 1.000\\
+RefCOCO   & 91.7 & 100.0 & .939 & 1.000\\
+\bottomrule
+\end{tabular}
+\end{center}
+\vspace{-5pt}
+Full-query accuracy and mean reciprocal rank (MRR) use 24 queries per row;
+chance accuracy is 3.125\%. Overall accuracy is 44.8\% for CLIP and 86.5\% for
+Qwen, with 40 CLIP-only failures and 13 shared failures.
+
+Removing the generic classification instruction raises CLIP accuracy from 4.2\%
+to 54.2\%, reducing Qwen's advantage to 4.2 percentage points. On CIRR, text-only
+queries outperform full queries for both models (CLIP: 70.8\% versus 66.7\%;
+Qwen: 91.7\% versus 87.5\%). These pools can reward the edit text without requiring
+the reference image.
+
+\heading{3. Five failure cases}
+The notebook preserves the inspected images. Below, $F/I/T$ denotes the gold
+target's rank for full, image-only, and text-only queries; lower is better.
+
+\case{1. CIFAR-100:65 --- shared near-tie.}
+For the gold label \emph{girl}, CLIP predicts \emph{man} ($F/I/T=2/1/2$) and
+Qwen predicts \emph{woman} ($3/2/4$). CLIP's gold-minus-best-negative margin is
+only $-0.0005$. Removing the instruction restores rank 1, identifying the added
+text vector as the cause of the reversal. Qwen also worsens with text.
+The coarse $32\times32$ portrait and ambiguous labels limit stronger claims.
+
+\case{2. CIFAR-100:69 --- fusion loses recognition.}
+For pink flowers labeled \emph{tulip}, CLIP predicts the literal dataset label
+\texttt{cra} ($18/1/31$); Qwen retrieves \emph{tulip} ($1/1/13$). CLIP's gold
+margin drops from $+0.0286$ for image alone to $-0.0816$ after fusion. Its image
+embedding already recognizes the flower: adding generic text distorts the
+ranking. Qwen retains the correct match through joint conditioning, although
+candidate wording remains a confounder.
+
+\case{3. CIRR:193 --- incomplete attribute binding.}
+The reference shows four dogs in a car; the edit requests one dog in a field.
+CLIP retrieves several dogs on a deck ($7/5/15$), missing count and setting.
+Qwen retrieves one dog on a sofa ($2/12/1$), satisfying only count. Qwen's
+text-only success disappears when the reference image returns, suggesting
+competing appearance and edit cues in its pooled representation. Joint encoding
+does not reliably bind every requested attribute.
+
+\case{4. TextVQA:33 --- selecting relevant text.}
+Asked the time on a smartwatch, CLIP predicts notification text \texttt{say thnx}
+($6/2/12$); Qwen retrieves the small, partly glare-obscured \texttt{13:57}
+($1/16/4$). Qwen succeeds only with both modalities, consistent with
+question-conditioned selection of visual text. CLIP's independent image encoder
+cannot adapt its features to the question. Different resolutions and OCR-related
+training also contribute plausible explanations.
+
+\case{5. RefCOCO:595 --- object versus scene.}
+For ``white chair top right,'' CLIP retrieves diners ($5/5/2$), whereas Qwen
+retrieves the chair crop ($1/4/1$). CLIP's global scene similarity can outweigh
+the requested object because its visual features are not word-conditioned.
+However, Qwen also succeeds from text alone: crop appearance can identify the
+target. This supports language-to-crop matching without demonstrating spatial
+reasoning. The metric measures retrieval, not localization IoU.
+
+\heading{4. Conclusion}
+Qwen wins more full-query rankings; TextVQA supports useful joint conditioning,
+while CLIP's fusion rule causes substantial failures despite useful image
+embeddings. Small samples, 32-way pools, and training/preprocessing differences prevent
+causal attribution to architecture. Fusion-weight and harder-negative tests
+could clarify these effects.
+
+\begingroup
+\footnotesize
+\begin{thebibliography}{3}
+\setlength{\itemsep}{0pt}
+\setlength{\parskip}{0pt}
+\bibitem{mmeb} Z. Jiang et al. \emph{VLM2Vec: Training Vision-Language Models for
+Massive Multimodal Embedding Tasks}. 2024.
+\href{https://arxiv.org/abs/2410.05160}{arXiv:2410.05160}.
+\bibitem{clip} A. Radford et al. \emph{Learning Transferable Visual Models From
+Natural Language Supervision}. 2021.
+\href{https://arxiv.org/abs/2103.00020}{arXiv:2103.00020}.
+\bibitem{qwen} M. Li et al. \emph{Qwen3-VL-Embedding and Qwen3-VL-Reranker:
+A Unified Framework for State-of-the-Art Multimodal Retrieval and Ranking}. 2026.
+\href{https://arxiv.org/abs/2601.04720}{arXiv:2601.04720}.
+\end{thebibliography}
+\endgroup
+\end{multicols}
+\end{document}
