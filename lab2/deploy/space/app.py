@@ -6,7 +6,7 @@ Configuration (environment variables, set as Space variables or secrets):
   HF_TOKEN           read token, needed when ASSETS_REPO is private (Space secret)
   LOCAL_DATA         folder with local copies of the dataset parquet files (testing); default: stream from the Hub
   TOPK               number of results (default 10)
-  NUM_THREADS        CPU threads for CLIP and FAISS (default: all cores)
+  NUM_THREADS        CPU threads for CLIP (on CPU hardware) and FAISS (default: all cores)
   FETCH_WORKERS      parallel image downloads (default 10)
   ROWGROUP_CACHE     parquet row groups kept in memory (default 64)
 """
@@ -17,6 +17,15 @@ import threading
 import time
 from collections import Counter, OrderedDict
 from concurrent.futures import ThreadPoolExecutor
+
+# On ZeroGPU hardware, `spaces` must be imported before torch. Outside Spaces it may be missing, and then
+# the decorator below does nothing.
+try:
+    import spaces
+    gpu = spaces.GPU
+except ImportError:
+    def gpu(fn=None, **_):
+        return fn if fn is not None else (lambda f: f)
 
 # torch must be imported before faiss: both bundle an OpenMP runtime, and loading faiss's first makes
 # torch crash when it starts its own threads (seen on macOS; harmless elsewhere).
@@ -67,7 +76,10 @@ _pretrained = ASSETS["pretrained"] or None
 _cfg = open_clip.get_pretrained_cfg(ASSETS["model"], _pretrained) if _pretrained else {}
 MODEL, _, PREPROCESS = open_clip.create_model_and_transforms(
     ASSETS["model"], pretrained=_pretrained, force_quick_gelu=bool(_cfg.get("quick_gelu", False)))
-MODEL.eval()
+# On ZeroGPU the model must be moved to cuda here, at start-up; a real GPU is attached only while a
+# @gpu function runs. On CPU hardware this stays on the CPU.
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+MODEL = MODEL.to(DEVICE).eval()
 
 
 # --- Image lookup: read only the parquet row group that holds a given row ------------------------
@@ -129,11 +141,16 @@ def short(c):
 
 
 # --- Search ---------------------------------------------------------------------------------------
+@gpu(duration=15)
 @torch.no_grad()
 def embed(img):
-    x = PREPROCESS(img.convert("RGB")).unsqueeze(0)
-    f = torch.nn.functional.normalize(MODEL.encode_image(x).float(), dim=-1)
-    return np.ascontiguousarray(f.numpy(), dtype=np.float32)
+    """Only this step uses the GPU; search and image fetching run on the CPU and cost no GPU quota."""
+    x = PREPROCESS(img.convert("RGB")).unsqueeze(0).to(DEVICE)
+    # fp16 on GPU, as when the database was embedded; fp32 on CPU.
+    with torch.autocast(device_type="cuda", dtype=torch.float16, enabled=(DEVICE == "cuda")):
+        f = MODEL.encode_image(x)
+    f = torch.nn.functional.normalize(f.float(), dim=-1)
+    return np.ascontiguousarray(f.cpu().numpy(), dtype=np.float32)
 
 
 def search(img, nprobe):

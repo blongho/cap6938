@@ -99,8 +99,8 @@ dataset, not stored in the Space.
 2. **Create the Space** and upload the app:
    ```bash
    hf auth login     # token with write access
-   hf repo create spaces/<your-username>/imagenet-image-search --type space --space-sdk gradio
-   hf upload spaces/<your-username>/imagenet-image-search lab2/deploy/space . --type space
+   hf repo create <your-username>/imagenet-image-search --type space --space-sdk gradio --private
+   hf upload <your-username>/imagenet-image-search lab2/deploy/space . --type space
    ```
 3. **Configure it** in the Space's *Settings → Variables and secrets*:
    - a variable `ASSETS_REPO` = `<your-username>/imagenet-clip-ivfpq`;

@@ -26,6 +26,10 @@ the 1,281,167 ImageNet-1k training images.
    [`benjamin-paine/imagenet-1k-256x256`](https://huggingface.co/datasets/benjamin-paine/imagenet-1k-256x256) parquet
    files, one row group (about 100 images) at a time. No ImageNet images are stored in this Space.
 
+**Hardware:** ZeroGPU. Only the CLIP embedding of the query runs on the GPU (marked `@spaces.GPU`); the FAISS
+search and image fetching run on the CPU. Each search uses a few seconds of the visitor's daily ZeroGPU quota
+(5 minutes for free accounts). The app also runs unchanged on CPU hardware.
+
 **Measured on 1,000 validation queries (2-core CPU, nprobe 16):** precision@10 0.682, recall@10 0.492 against exact
 search, 1.5 ms median search time. This is 241× faster than exact search, with an index 37× smaller.
 
